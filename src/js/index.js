@@ -2,6 +2,7 @@
 
 import { createStore, combineReducers } from "redux";
 import { createAction, handleActions } from "redux-actions";
+import { createSelector } from "reselect";
 
 const initialState = {
     hero: {
@@ -21,6 +22,14 @@ const initialState = {
     },
     monster: {}
 };
+
+const levels = [
+    { xp:    0, maxHealth: 50 }, // Level 1
+    { xp:  100, maxHealth: 55 }, // Level 2
+    { xp:  250, maxHealth: 60 }, // Level 3
+    { xp:  500, maxHealth: 67 }, // Level 4
+    { xp: 1000, maxHealth: 75 }, // Level 5
+];
 
 /*
  * Actions
@@ -49,13 +58,20 @@ function heroReducer(state = initialState.hero, action) {
     const { stats, inventory } = state;
 
     switch (action.type) {
-        case Actions.LEVEL_UP:
-            const level = state.level + 1;
-            return { ...state, level };
+        // case Actions.LEVEL_UP:
+        //     const level = state.level + 1;
+        //     return { ...state, level };
 
         case Actions.GAIN_XP:
-            const xp = state.xp + action.payload;
-            return { ...state, xp };
+            let { level, xp } = state;
+
+            xp += action.payload;
+
+            if (xp == levels[level].xp) {
+                level++;
+            }
+
+            return { ...state, level, xp };
 
         case Actions.MOVE:
             let { position: { x, y } } = state;
@@ -115,6 +131,31 @@ function monsterReducer(state = initialState.monster, action) {
 }
 
 /*
+ * Selectors
+**/
+function getXp(state) {
+    return state.hero.xp;
+}
+
+function getHealth(state) {
+    return state.hero.stats.heath;
+}
+
+const getLevel = createSelector(getXp, function(xp) {
+    return levels.filter(level => xp >= level.xp).length;
+});
+
+const getMaxHealth = createSelector(getLevel, function(l) {
+    return levels[l].maxHealth;
+});
+
+const isHealthLow = createSelector(
+    [ getHealth, getMaxHealth ],
+    function(health, maxHealth){
+        return health < maxHealth * 0.15;
+    });
+
+/*
  * Bootstrapping
 **/
 const reducer = combineReducers({
@@ -127,9 +168,15 @@ store.subscribe(function() {
     console.log(JSON.stringify(store.getState()));
 });
 
-store.dispatch(move(1, 0));
-store.dispatch(move(0, 1));
-store.dispatch(takeDamage(13));
-store.dispatch(drinkPotion());
+// store.dispatch(move(1, 0));
+// store.dispatch(move(0, 1));
+// store.dispatch(takeDamage(13));
+// store.dispatch(drinkPotion());
+// store.dispatch(gainXp(100));
+// store.dispatch(levelUp());
+
+console.log(isHealthLow(store.getState()));
+console.log(isHealthLow(store.getState()));
 store.dispatch(gainXp(100));
-store.dispatch(levelUp());
+console.log("LEVEL UP");
+console.log(isHealthLow(store.getState()));
